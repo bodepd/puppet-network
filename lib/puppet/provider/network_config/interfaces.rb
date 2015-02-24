@@ -34,9 +34,9 @@ Puppet::Type.type(:network_config).provide(:interfaces) do
     end
   end
 
-  def self.raise_malformed
+  def self.raise_malformed(msg=nil)
     @failed = true
-    raise MalformedInterfacesError
+    raise MalformedInterfacesError.new(msg)
   end
 
   class Instance
@@ -179,18 +179,23 @@ Puppet::Type.type(:network_config).provide(:interfaces) do
           family = match[2]
           method = match[3]
 
-          # If an iface block for this interface has been seen, the file is
+          # If an iface block for this interface has been seen and one of the entries is not ipv6, then the file is
           # malformed.
-          raise_malformed if Instance[name] and Instance[name].family
+          if Instance[name] and Instance[name].family and Instance[name].family and Instance[name].family != 'inet6' and family != 'inet6'
+            raise_malformed("interface #{name} of family: #{family} is a duplicate")
+          end
 
-          status = :iface
-          current_interface = name
+          # just ignore ipv6 entries, it's not perfect, but it's better than just failing
+          if family != 'inet6'
+            status = :iface
+            current_interface = name
 
-          # This is done automatically
-          #Instance[name].name   = name
-          Instance[name].family = family
-          Instance[name].method = method
-          Instance[name].mode   = :raw
+            # This is done automatically
+            #Instance[name].name   = name
+            Instance[name].family = family
+            Instance[name].method = method
+            Instance[name].mode   = :raw
+          end
 
         else
           # If we match on a string with a leading iface, but it isn't in the
